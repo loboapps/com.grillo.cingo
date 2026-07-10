@@ -120,6 +120,7 @@
   tr.excluded td { color: var(--muted); }
   .pos { color: var(--pos); font-weight: 600; }
   .neg { color: var(--neg); font-weight: 600; }
+  .neutral { color: var(--muted); font-weight: 600; }
   .empty-msg {
     color: var(--muted);
     font-size: 14px;
@@ -130,7 +131,7 @@
 <body>
 <div class="wrap">
   <h1>Calculadora de Horas de Ponto</h1>
-  <p class="sub">Cole abaixo o relatório de marcações (Data / Dia Semana / Marcações / Ocorrências) e clique em Calcular. Nada é salvo — tudo fica só nesta aba.</p>
+  <p class="sub">Cole abaixo o relatório de marcações (Data / Dia Semana / Marcações / Ocorrências) e clique em Calcular. Nada é salvo — tudo fica só nesta aba. Dias com diferença dentro de ±20min de tolerância não contam pro saldo do período.</p>
 
   <div class="card">
     <textarea id="input" placeholder="Cole aqui o relatório de ponto..."></textarea>
@@ -153,7 +154,7 @@
         <div class="value" id="stat-esperado">–</div>
       </div>
       <div class="stat">
-        <div class="label">Saldo do período</div>
+        <div class="label">Saldo do período (após tolerância)</div>
         <div class="value" id="stat-saldo">–</div>
       </div>
     </div>
@@ -178,6 +179,7 @@
 
 <script>
 const TARGET_MINUTES = 8 * 60;
+const TOLERANCE_MINUTES = 20;
 
 function timeToMinutes(hhmm) {
   const [h, m] = hhmm.split(':').map(Number);
@@ -219,7 +221,11 @@ function computeDay(marcacoesText) {
     worked -= (paList[1] - paList[0]);
   }
 
-  return { status: 'ok', worked, diff: worked - TARGET_MINUTES };
+  const diff = worked - TARGET_MINUTES;
+  const withinTolerance = Math.abs(diff) <= TOLERANCE_MINUTES;
+  const adjustedDiff = withinTolerance ? 0 : diff;
+
+  return { status: 'ok', worked, diff, withinTolerance, adjustedDiff };
 }
 
 function parseReport(raw) {
@@ -246,6 +252,7 @@ function render(days) {
 
   let totalWorked = 0;
   let countedDays = 0;
+  let saldo = 0;
 
   for (const day of days) {
     const tr = document.createElement('tr');
@@ -263,20 +270,22 @@ function render(days) {
 
     countedDays++;
     totalWorked += day.worked;
-    const diffClass = day.diff >= 0 ? 'pos' : 'neg';
+    saldo += day.adjustedDiff;
+
+    const diffClass = day.withinTolerance ? 'neutral' : (day.diff >= 0 ? 'pos' : 'neg');
     const diffSign = day.diff >= 0 ? '+' : '';
+    const diffTitle = day.withinTolerance ? ' title="Dentro da tolerância de 20min — não conta pro saldo"' : '';
 
     tr.innerHTML = `
       <td>${day.data}</td>
       <td>${day.diaSemana}</td>
       <td>${formatMinutes(day.worked)}</td>
-      <td class="${diffClass}">${diffSign}${formatMinutes(day.diff)}</td>
+      <td class="${diffClass}"${diffTitle}>${diffSign}${formatMinutes(day.diff)}</td>
     `;
     body.appendChild(tr);
   }
 
   const expected = countedDays * TARGET_MINUTES;
-  const saldo = totalWorked - expected;
 
   document.getElementById('stat-dias').textContent = countedDays;
   document.getElementById('stat-trabalhadas').textContent = formatMinutes(totalWorked);
