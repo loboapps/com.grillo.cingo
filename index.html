@@ -131,7 +131,7 @@
 <body>
 <div class="wrap">
   <h1>Calculadora de Horas de Ponto</h1>
-  <p class="sub">Cole abaixo o relatório de marcações (Data / Dia Semana / Marcações / Ocorrências) e clique em Calcular. Nada é salvo — tudo fica só nesta aba. Dias com diferença dentro de ±20min de tolerância não contam pro saldo do período.</p>
+  <p class="sub">Cole abaixo o relatório de marcações (Data / Dia Semana / Marcações / Ocorrências) e clique em Calcular. Nada é salvo — tudo fica só nesta aba. Dias com diferença dentro de ±10min de tolerância não contam pro saldo do período.</p>
 
   <div class="card">
     <textarea id="input" placeholder="Cole aqui o relatório de ponto..."></textarea>
@@ -179,7 +179,7 @@
 
 <script>
 const TARGET_MINUTES = 8 * 60;
-const TOLERANCE_MINUTES = 20;
+const TOLERANCE_MINUTES = 10;
 
 function timeToMinutes(hhmm) {
   const [h, m] = hhmm.split(':').map(Number);
@@ -274,7 +274,7 @@ function render(days) {
 
     const diffClass = day.withinTolerance ? 'neutral' : (day.diff >= 0 ? 'pos' : 'neg');
     const diffSign = day.diff >= 0 ? '+' : '';
-    const diffTitle = day.withinTolerance ? ' title="Dentro da tolerância de 20min — não conta pro saldo"' : '';
+    const diffTitle = day.withinTolerance ? ' title="Dentro da tolerância de 10min — não conta pro saldo"' : '';
 
     tr.innerHTML = `
       <td>${day.data}</td>

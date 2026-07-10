@@ -34,10 +34,10 @@ separados por espaços, onde `LABEL` é `O` (marcação real de entrada/saída) 
    - Se houver um par de (PA) (duas marcações), subtrai a duração do
      intervalo (segunda PA − primeira PA) do total.
 5. Diferença do dia = horas trabalhadas − 8h, exibida com sinal (+/−).
-6. **Tolerância de 20 minutos:** se `|diferença| <= 20min`, o dia não
-   impacta o saldo do período (contribuição = 0). Se `|diferença| > 20min`,
+6. **Tolerância de 10 minutos:** se `|diferença| <= 10min`, o dia não
+   impacta o saldo do período (contribuição = 0). Se `|diferença| > 10min`,
    o valor **inteiro** da diferença conta no saldo — não só o excedente
-   acima de 20min (lógica de tolerância de ponto tipo CLT, não dedução).
+   acima de 10min (lógica de tolerância de ponto tipo CLT, não dedução).
    A diferença bruta continua exibida na tabela; dias dentro da tolerância
    aparecem com destaque neutro (nem verde nem vermelho) indicando que não
    contam pro saldo.
@@ -46,7 +46,7 @@ separados por espaços, onde `LABEL` é `O` (marcação real de entrada/saída) 
 
 Tabela com colunas: Data | Dia da semana | Horas trabalhadas | Diferença.
 Linhas sem dado ou incompletas aparecem visualmente distintas (esmaecidas) e
-não contam pro total. Dias dentro da tolerância de 20min aparecem com a
+não contam pro total. Dias dentro da tolerância de 10min aparecem com a
 diferença em destaque neutro. Rodapé mostra o saldo total do período: soma
 das diferenças **ajustadas pela tolerância** de todos os dias computados.
 
