@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Calculadora de Horas de Ponto</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f5f5f7;
+    --card: #ffffff;
+    --text: #1d1d1f;
+    --muted: #6e6e73;
+    --border: #e2e2e6;
+    --pos: #1a7f37;
+    --neg: #c9302c;
+    --accent: #2563eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #131316;
+      --card: #1c1c20;
+      --text: #f2f2f3;
+      --muted: #9a9aa1;
+      --border: #2e2e33;
+      --pos: #4ade80;
+      --neg: #f87171;
+      --accent: #60a5fa;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 16px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 22px;
+    margin: 0 0 4px;
+  }
+  p.sub {
+    color: var(--muted);
+    margin: 0 0 20px;
+    font-size: 14px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 180px;
+    resize: vertical;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+  }
+  button {
+    margin-top: 12px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { opacity: 0.9; }
+  .summary {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .stat {
+    flex: 1;
+    min-width: 140px;
+  }
+  .stat .label {
+    color: var(--muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .stat .value {
+    font-size: 24px;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  tr.excluded td { color: var(--muted); }
+  .pos { color: var(--pos); font-weight: 600; }
+  .neg { color: var(--neg); font-weight: 600; }
+  .empty-msg {
+    color: var(--muted);
+    font-size: 14px;
+    padding: 8px 0;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Calculadora de Horas de Ponto</h1>
+  <p class="sub">Cole abaixo o relatório de marcações (Data / Dia Semana / Marcações / Ocorrências) e clique em Calcular. Nada é salvo — tudo fica só nesta aba.</p>
+
+  <div class="card">
+    <textarea id="input" placeholder="Cole aqui o relatório de ponto..."></textarea>
+    <br />
+    <button id="calc-btn">Calcular</button>
+  </div>
+
+  <div class="card" id="summary-card" style="display:none;">
+    <div class="summary">
+      <div class="stat">
+        <div class="label">Dias computados</div>
+        <div class="value" id="stat-dias">–</div>
+      </div>
+      <div class="stat">
+        <div class="label">Horas trabalhadas</div>
+        <div class="value" id="stat-trabalhadas">–</div>
+      </div>
+      <div class="stat">
+        <div class="label">Esperado (8h/dia)</div>
+        <div class="value" id="stat-esperado">–</div>
+      </div>
+      <div class="stat">
+        <div class="label">Saldo do período</div>
+        <div class="value" id="stat-saldo">–</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="result-card" style="display:none;">
+    <table>
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Dia da semana</th>
+          <th>Horas trabalhadas</th>
+          <th>Diferença</th>
+        </tr>
+      </thead>
+      <tbody id="result-body"></tbody>
+    </table>
+  </div>
+
+  <div class="empty-msg" id="empty-msg">Nenhum resultado ainda. Cole os dados acima e clique em Calcular.</div>
+</div>
+
+<script>
+const TARGET_MINUTES = 8 * 60;
+
+function timeToMinutes(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function formatMinutes(totalMinutes) {
+  const sign = totalMinutes < 0 ? '-' : '';
+  const abs = Math.abs(totalMinutes);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  return `${sign}${h}h${String(m).padStart(2, '0')}`;
+}
+
+function parseMarcacoes(text) {
+  const tokens = [];
+  const re = /(\d{1,2}:\d{2})\s*\(([A-Za-z]+)\)/g;
+  let match;
+  while ((match = re.exec(text)) !== null) {
+    tokens.push({ minutes: timeToMinutes(match[1]), label: match[2].toUpperCase() });
+  }
+  return tokens;
+}
+
+function computeDay(marcacoesText) {
+  const tokens = parseMarcacoes(marcacoesText);
+  const oList = tokens.filter(t => t.label === 'O').map(t => t.minutes);
+  const paList = tokens.filter(t => t.label === 'PA').map(t => t.minutes);
+
+  if (oList.length === 0) {
+    return { status: 'sem-dado' };
+  }
+  if (oList.length === 1) {
+    return { status: 'incompleto' };
+  }
+
+  let worked = oList[oList.length - 1] - oList[0];
+  if (paList.length === 2) {
+    worked -= (paList[1] - paList[0]);
+  }
+
+  return { status: 'ok', worked, diff: worked - TARGET_MINUTES };
+}
+
+function parseReport(raw) {
+  const lines = raw.split('\n');
+  const days = [];
+  const dateRe = /^\d{2}\/\d{2}\/\d{4}$/;
+
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const cols = line.split('\t');
+    const data = (cols[0] || '').trim();
+    if (!dateRe.test(data)) continue;
+
+    const diaSemana = (cols[1] || '').trim();
+    const marcacoesText = cols[2] || '';
+    days.push({ data, diaSemana, ...computeDay(marcacoesText) });
+  }
+  return days;
+}
+
+function render(days) {
+  const body = document.getElementById('result-body');
+  body.innerHTML = '';
+
+  let totalWorked = 0;
+  let countedDays = 0;
+
+  for (const day of days) {
+    const tr = document.createElement('tr');
+
+    if (day.status !== 'ok') {
+      tr.className = 'excluded';
+      tr.innerHTML = `
+        <td>${day.data}</td>
+        <td>${day.diaSemana}</td>
+        <td colspan="2">${day.status === 'sem-dado' ? '—' : 'incompleto'}</td>
+      `;
+      body.appendChild(tr);
+      continue;
+    }
+
+    countedDays++;
+    totalWorked += day.worked;
+    const diffClass = day.diff >= 0 ? 'pos' : 'neg';
+    const diffSign = day.diff >= 0 ? '+' : '';
+
+    tr.innerHTML = `
+      <td>${day.data}</td>
+      <td>${day.diaSemana}</td>
+      <td>${formatMinutes(day.worked)}</td>
+      <td class="${diffClass}">${diffSign}${formatMinutes(day.diff)}</td>
+    `;
+    body.appendChild(tr);
+  }
+
+  const expected = countedDays * TARGET_MINUTES;
+  const saldo = totalWorked - expected;
+
+  document.getElementById('stat-dias').textContent = countedDays;
+  document.getElementById('stat-trabalhadas').textContent = formatMinutes(totalWorked);
+  document.getElementById('stat-esperado').textContent = formatMinutes(expected);
+  const saldoEl = document.getElementById('stat-saldo');
+  saldoEl.textContent = (saldo >= 0 ? '+' : '') + formatMinutes(saldo);
+  saldoEl.className = 'value ' + (saldo >= 0 ? 'pos' : 'neg');
+
+  document.getElementById('summary-card').style.display = days.length ? '' : 'none';
+  document.getElementById('result-card').style.display = days.length ? '' : 'none';
+  document.getElementById('empty-msg').style.display = days.length ? 'none' : '';
+}
+
+document.getElementById('calc-btn').addEventListener('click', () => {
+  const raw = document.getElementById('input').value;
+  const days = parseReport(raw);
+  render(days);
+});
+</script>
+</body>
+</html>
